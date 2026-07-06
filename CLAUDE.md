@@ -2,10 +2,10 @@
 
 Public GitHub Pages repo. Serves at `go.growthify.com.au` (custom domain).
 
-Sits under the `Growthify - Team` branch of the Michael AI OS structure - the team-shared layer for client-facing HTML deliverables.
+Sibling of the client services repo (lives at `~/Documents/gAIme plan/Business/web shared/`) - the public layer for client-facing HTML deliverables.
 
 ## What lives here vs in the workspace
-- **Workspace** (`Growthify-Team/`, private): drafts, data, working files
+- **Workspace** (`Business/client services/`, private): drafts, data, working files
 - **This repo** (public): only files ready to publish
 
 ## Layout
@@ -49,7 +49,7 @@ Shows file → password mapping. Send the URL and password in **separate channel
 ```
 
 ## Teammate onboarding (one-time per machine)
-1. `git clone https://github.com/michaelgrowthify/Web-Shared.git`
+1. `git clone https://github.com/growthify-au/Web-Shared.git`
 2. `npm install` (installs StatiCrypt)
 3. `cp .env.example .env` and paste in the master secret (get it from Michael)
 4. `git config core.hooksPath .githooks` (enables auto-encrypt on commit)
