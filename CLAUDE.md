@@ -12,8 +12,9 @@ Sibling of the client services repo (lives at `~/Documents/gAIme plan/Business/w
 - `index.html` - root landing (blank for now)
 - `public-encrypted/` - **source** HTML for sensitive content (you edit here)
 - `public/` - encrypted output, auto-generated on commit (deploys to `go.growthify.com.au/public/...`)
-- `scripts/` - `encrypt.sh` (auto on commit) and `passwords.sh` (lookup)
-- `.githooks/pre-commit` - runs `encrypt.sh` on every commit
+- `scripts/encrypt/` - `encrypt_public.py` (encrypt) + `template.html` (Growthify gate). Follows the `encryption-setup` skill (gAIme plan level).
+- `Makefile` - `make encrypt` / `make encrypt-show` / `make encrypt-changed`
+- `.githooks/pre-commit` - runs `encrypt_public.py --skip-unchanged` on every commit
 
 ## Encrypt vs leave public
 **Encrypt** (drop into `public-encrypted/`):
@@ -39,19 +40,19 @@ Sibling of the client services repo (lives at `~/Documents/gAIme plan/Business/w
 
 ### Look up the password to share with a client
 ```
-./scripts/passwords.sh
+make encrypt-show
 ```
-Shows file → password mapping. Send the URL and password in **separate channels** (e.g. URL via email, password via DM).
+Shows file → password mapping (derives without re-encrypting). Send the URL and password in **separate channels** (e.g. URL via email, password via DM).
 
 ### Re-encrypt without committing (e.g. after editing locally)
 ```
-./scripts/encrypt.sh
+make encrypt
 ```
 
 ## Teammate onboarding (one-time per machine)
 1. `git clone https://github.com/growthify-au/Web-Shared.git`
 2. `npm install` (installs StatiCrypt)
-3. `cp .env.example .env` and paste in the master secret (get it from Michael)
+3. `cp .env.example .env` and paste in the master secret as `ENCRYPT_SECRET` (get it from Michael)
 4. `git config core.hooksPath .githooks` (enables auto-encrypt on commit)
 
 ## Master secret

@@ -1,4 +1,7 @@
 #!/usr/bin/env bash
-# Auto-runs on every commit. Encrypts public-encrypted/* into public/.
+# Auto-runs on every commit. Encrypts public-encrypted/* into public/
+# via the encryption-setup skill's script. Re-stages regenerated output.
 set -e
-"$(git rev-parse --show-toplevel)/scripts/encrypt.sh"
+ROOT="$(git rev-parse --show-toplevel)"
+python3 "$ROOT/scripts/encrypt/encrypt_public.py" --skip-unchanged
+git add "$ROOT/public" 2>/dev/null || true
