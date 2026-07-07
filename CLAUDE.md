@@ -32,7 +32,13 @@ Sibling of the client services repo (lives at `~/Documents/gAIme plan/Business/w
 
 ## Workflow
 
-### Add an encrypted deliverable
+### Publish a report in one step (easiest)
+```
+make publish FILE="/path/to/report.html"
+```
+Copies the report into `public-encrypted/reports/`, encrypts it, and prints the shareable **URL + password** ready to send. Then `git add . && git commit && git push` to deploy. Optional `NAME="custom-name.html"` to rename the output.
+
+### Add an encrypted deliverable (manual)
 1. Save the HTML to `public-encrypted/<path>/<file>.html`
 2. `git add` + `git commit` - pre-commit hook encrypts it into `public/<path>/<file>.html`
 3. `git push`
@@ -42,7 +48,7 @@ Sibling of the client services repo (lives at `~/Documents/gAIme plan/Business/w
 ```
 make encrypt-show
 ```
-Shows file → password mapping (derives without re-encrypting). Send the URL and password in **separate channels** (e.g. URL via email, password via DM).
+Prints URL + password per file (derives without re-encrypting). Send the URL and password in **separate channels** (e.g. URL via email, password via DM).
 
 ### Re-encrypt without committing (e.g. after editing locally)
 ```

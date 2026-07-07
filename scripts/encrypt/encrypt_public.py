@@ -81,14 +81,18 @@ def encrypt_file(src: Path, output_dir: Path, password: str) -> bool:
     return True
 
 
+BASE_URL = "https://go.growthify.com.au/public/"
+
+
 def print_password_table(passwords: dict, results: dict = None):
+    # Copy-paste friendly: URL + password per file (what you send the client).
     print()
-    print(f"  {'File':<45} Password")
-    print(f"  {'-'*45} {'-'*24}")
     for name, pwd in passwords.items():
         status = f"  [{results[name]}]" if results else ""
-        print(f"  {name:<45} {pwd}{status}")
-    print()
+        print(f"  {name}{status}")
+        print(f"    URL:      {BASE_URL}{name}")
+        print(f"    Password: {pwd}")
+        print()
 
 
 def main():
