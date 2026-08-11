@@ -447,16 +447,49 @@ ul{margin:0;padding:0;list-style:none}
   .stats>div{border-left:0;border-top:1px solid rgba(255,255,255,.22)}
   .stats>div:first-child{border-top:0}
   .ft__top{grid-template-columns:1fr}
-  .search{display:none}
   .h-xl{font-size:clamp(38px,11vw,54px)}
-  .hdr .wrap{min-height:70px;gap:12px}
-  .logo{--logo-cap:21px}
-  .utils .btn{padding:10px 14px;font-size:13px;gap:7px}
+  /* mobile header: two rows.
+     row 1  [logo]        [trade login]        [burger]
+     row 2  [ full-width search                        ]
+     .utils becomes display:contents so its three children place themselves
+     directly into the header grid. */
+  .hdr .wrap{
+    display:grid;min-height:0;
+    grid-template-columns:auto minmax(0,1fr) auto;
+    grid-template-areas:
+      "logo login burger"
+      "search search search";
+    align-items:center;gap:12px;
+    padding-top:13px;padding-bottom:13px;
+  }
+  .logo{grid-area:logo;--logo-cap:21px}
+  .utils{display:contents}
+  .utils .btn{grid-area:login;justify-self:center;padding:10px 14px;font-size:13px;gap:7px}
+  .burger{grid-area:burger;justify-self:end;display:flex}
+  .search{grid-area:search;display:flex;width:100%;min-width:0;padding:11px 13px}
   .bar .wrap{display:flex;flex-wrap:wrap;justify-content:center;gap:3px 14px;padding-top:6px;padding-bottom:6px}
   .bar .hrs{display:none}
   .bar .deliver{order:-1;flex:1 0 100%;text-align:center;white-space:normal}
   .bar .contact{gap:14px}
   .bar .addr .full{display:none}
+}
+
+/* narrow phones: the header's top row is logo + trade login + burger, which runs out of
+   room around 370px. Tighten the lockup and the button rather than let the gaps collapse. */
+@media (max-width:400px){
+  .hdr .wrap{gap:9px}
+  .logo{--logo-cap:19px}
+  .utils .btn{padding:9px 11px;font-size:12px;letter-spacing:.10em;gap:6px}
+  .utils .btn .ico{width:13px;height:13px}
+  .bar{font-size:12px}
+}
+/* below ~340px the three items genuinely will not fit, so the button degrades to
+   "LOGIN" with the padlock rather than the row overlapping */
+@media (max-width:344px){
+  .hdr .wrap{gap:7px}
+  .logo{--logo-cap:17px}
+  .utils .btn .lbl{display:none}
+  .burger{width:38px;height:36px;padding:10px 9px}
 }
 </style>
 </head>
@@ -619,7 +652,7 @@ ul{margin:0;padding:0;list-style:none}
     </div>
     <a class="btn" href="#">
       <svg class="ico" viewBox="0 0 24 24" style="width:14px;height:14px"><rect x="4" y="10.5" width="16" height="10.5"/><path d="M8 10.5V7a4 4 0 0 1 8 0v3.5"/></svg>
-      Trade login
+      <span class="lbl">Trade </span>login
     </a>
   </div>
 </div></header>
