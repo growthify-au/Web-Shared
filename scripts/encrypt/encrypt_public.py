@@ -9,6 +9,16 @@ Standard: this repo follows the `encryption-setup` skill. Password strategy:
   - Each file gets a unique password - sharing one doesn't expose others
   - Deterministic: regenerate any password from secret + filename
 
+Overrides: `.password-overrides.json` (gitignored, repo root) maps a relative path
+to a chosen password, for the occasional client who needs something memorable:
+    { "reports/example.html": "clientname2026" }
+The override is honoured by every code path including the pre-commit hook, so a
+custom password survives future re-encryption instead of silently reverting to the
+derived one. Overrides are weaker than derived passwords by definition - keep them
+for low-sensitivity documents. The file is gitignored (it holds plaintext passwords
+and this is a public repo), so teammates need a copy from Michael to re-encrypt
+those files without changing their password.
+
 Branding: the Growthify gate lives in scripts/encrypt/template.html (StatiCrypt
 placeholder style), so the --template-* flags below fill its copy. This is the one
 intentional local customisation on top of the skill's canonical script.
@@ -24,6 +34,7 @@ import argparse
 import base64
 import hashlib
 import hmac
+import json
 import os
 import subprocess
 import sys
@@ -42,6 +53,7 @@ if _env_file.exists():
 SOURCE_DIR = WORKSPACE / "public-encrypted"
 OUTPUT_DIR = WORKSPACE / "public"
 TEMPLATE = Path(__file__).parent / "template.html"
+OVERRIDES_FILE = WORKSPACE / ".password-overrides.json"
 
 # Growthify gate copy (fills the placeholders in template.html)
 BRAND_FLAGS = [
@@ -61,6 +73,33 @@ def derive_password(master_secret: str, relative_path: str) -> str:
     msg = relative_path.encode("utf-8")
     digest = hmac.new(key, msg, hashlib.sha256).digest()
     return base64.urlsafe_b64encode(digest)[:24].decode("ascii")
+
+
+def load_overrides() -> dict:
+    """Read .password-overrides.json - {relative_path: password}. Absent file is fine."""
+    if not OVERRIDES_FILE.exists():
+        return {}
+    try:
+        data = json.loads(OVERRIDES_FILE.read_text())
+    except json.JSONDecodeError as exc:
+        print(f"ERROR: {OVERRIDES_FILE.name} is not valid JSON: {exc}", file=sys.stderr)
+        sys.exit(1)
+    if not isinstance(data, dict):
+        print(f"ERROR: {OVERRIDES_FILE.name} must be an object of path -> password.", file=sys.stderr)
+        sys.exit(1)
+    bad = [k for k, v in data.items() if not isinstance(v, str) or not v]
+    if bad:
+        print(f"ERROR: {OVERRIDES_FILE.name} has empty/non-string password(s) for: {', '.join(bad)}",
+              file=sys.stderr)
+        sys.exit(1)
+    return data
+
+
+def password_for(master_secret: str, relative_path: str, overrides: dict) -> tuple:
+    """Return (password, is_override) - an override always wins over the derived value."""
+    if relative_path in overrides:
+        return overrides[relative_path], True
+    return derive_password(master_secret, relative_path), False
 
 
 def encrypt_file(src: Path, output_dir: Path, password: str) -> bool:
@@ -84,14 +123,16 @@ def encrypt_file(src: Path, output_dir: Path, password: str) -> bool:
 BASE_URL = "https://go.growthify.com.au/public/"
 
 
-def print_password_table(passwords: dict, results: dict = None):
+def print_password_table(passwords: dict, results: dict = None, overrides: dict = None):
     # Copy-paste friendly: URL + password per file (what you send the client).
+    overrides = overrides or {}
     print()
     for name, pwd in passwords.items():
         status = f"  [{results[name]}]" if results else ""
         print(f"  {name}{status}")
         print(f"    URL:      {BASE_URL}{name}")
-        print(f"    Password: {pwd}")
+        tag = "  (override)" if name in overrides else ""
+        print(f"    Password: {pwd}{tag}")
         print()
 
 
@@ -135,12 +176,22 @@ def main():
         print(f"No HTML files to process in {SOURCE_DIR}")
         sys.exit(0)
 
-    passwords = {rel_paths[f]: derive_password(master_secret, rel_paths[f]) for f in html_files}
+    overrides = load_overrides()
+    passwords = {}
+    used_overrides = {}
+    for f in html_files:
+        rel = rel_paths[f]
+        pwd, is_override = password_for(master_secret, rel, overrides)
+        passwords[rel] = pwd
+        if is_override:
+            used_overrides[rel] = pwd
 
     if args.show:
-        print(f"\nDerived passwords for files in {SOURCE_DIR.relative_to(WORKSPACE)}/")
+        print(f"\nPasswords for files in {SOURCE_DIR.relative_to(WORKSPACE)}/")
         print("(Master secret not shown - store it in your password manager)")
-        print_password_table(passwords)
+        if used_overrides:
+            print(f"({len(used_overrides)} from {OVERRIDES_FILE.name}, marked override)")
+        print_password_table(passwords, overrides=used_overrides)
         return
 
     template_note = f" (template: {TEMPLATE.name})" if TEMPLATE.exists() else " (default template)"
@@ -157,7 +208,7 @@ def main():
         print(results[rel])
 
     print("\nPasswords (share individually per recipient):")
-    print_password_table(passwords, results)
+    print_password_table(passwords, results, overrides=used_overrides)
 
     failed = [rel for rel, status in results.items() if status != "OK"]
     if failed:
