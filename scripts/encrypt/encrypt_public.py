@@ -1,7 +1,12 @@
 #!/usr/bin/env python3
 """
-Encrypt all HTML files in public-encrypted/ using StatiCrypt,
+Encrypt all HTML files from the private source tree using StatiCrypt,
 output the protected files to public/ (the GitHub Pages release folder).
+
+Sources: ../web-shared-sources/ in the PRIVATE Team repo (override with
+WEB_SHARED_SOURCES). They deliberately do NOT live in this repo - it is public and
+Pages serves it from root, so a plaintext source committed here is readable by
+anyone at /public-encrypted/<path>, gate or no gate. See SOURCE_DIR below.
 
 Standard: this repo follows the `encryption-setup` skill. Password strategy:
   Each file's password = HMAC-SHA256(master_secret, relative_path), base64-encoded.
@@ -50,7 +55,14 @@ if _env_file.exists():
             _k, _, _v = _line.partition("=")
             os.environ.setdefault(_k.strip(), _v.strip().strip('"').strip("'"))
 
-SOURCE_DIR = WORKSPACE / "public-encrypted"
+# Sources live OUTSIDE this repo. This repo is public and GitHub Pages serves it from
+# root, so any plaintext source committed here is served unauthenticated at
+# /public-encrypted/<path> - which silently defeated the gate on every page until
+# 22/09/2026. Sources now sit in the private Team repo alongside the rest of the
+# client workspace; only the encrypted output in public/ is ever committed here.
+# Override with WEB_SHARED_SOURCES if your checkout is laid out differently.
+DEFAULT_SOURCE_DIR = WORKSPACE.parent / "web-shared-sources"
+SOURCE_DIR = Path(os.environ.get("WEB_SHARED_SOURCES") or DEFAULT_SOURCE_DIR)
 OUTPUT_DIR = WORKSPACE / "public"
 TEMPLATE = Path(__file__).parent / "template.html"
 OVERRIDES_FILE = WORKSPACE / ".password-overrides.json"
@@ -66,6 +78,15 @@ BRAND_FLAGS = [
     "--template-toggle-show", "Show password",
     "--template-toggle-hide", "Hide password",
 ]
+
+
+def _display(path: Path) -> str:
+    """Path relative to the repo when it sits inside it, otherwise the full path.
+    SOURCE_DIR now lives outside the repo, so relative_to() would raise."""
+    try:
+        return str(path.relative_to(WORKSPACE))
+    except ValueError:
+        return str(path)
 
 
 def derive_password(master_secret: str, relative_path: str) -> str:
@@ -151,6 +172,10 @@ def main():
 
     if not SOURCE_DIR.exists():
         print(f"ERROR: Source directory '{SOURCE_DIR}' does not exist.", file=sys.stderr)
+        print("  Sources live in the PRIVATE Team repo, not here - this repo is public and", file=sys.stderr)
+        print("  Pages serves it from root, so plaintext committed here is world-readable.", file=sys.stderr)
+        print("  Expected: <Team repo>/web-shared-sources/ as a sibling of 'web shared/'.", file=sys.stderr)
+        print("  Set WEB_SHARED_SOURCES=/path/to/sources if your checkout differs.", file=sys.stderr)
         sys.exit(1)
 
     html_files = sorted(SOURCE_DIR.rglob("*.html"))
@@ -187,7 +212,7 @@ def main():
             used_overrides[rel] = pwd
 
     if args.show:
-        print(f"\nPasswords for files in {SOURCE_DIR.relative_to(WORKSPACE)}/")
+        print(f"\nPasswords for files in {_display(SOURCE_DIR)}/")
         print("(Master secret not shown - store it in your password manager)")
         if used_overrides:
             print(f"({len(used_overrides)} from {OVERRIDES_FILE.name}, marked override)")
@@ -196,7 +221,7 @@ def main():
 
     template_note = f" (template: {TEMPLATE.name})" if TEMPLATE.exists() else " (default template)"
     print(f"\nEncrypting {len(html_files)} file(s){template_note}")
-    print(f"  {SOURCE_DIR.relative_to(WORKSPACE)}/ -> {OUTPUT_DIR.relative_to(WORKSPACE)}/\n")
+    print(f"  {_display(SOURCE_DIR)}/ -> {_display(OUTPUT_DIR)}/\n")
 
     results = {}
     for src in html_files:
