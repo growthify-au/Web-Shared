@@ -116,11 +116,28 @@ def load_overrides() -> dict:
     return data
 
 
+# Folders whose pages share ONE password, keyed on the first 2 path segments. An SEO
+# dashboard is several linked pages; a password per page would lock the client out
+# of every link. seo/<site>/... shares the password of "seo/<site>"; seo/index.html
+# (the internal overview) keeps its own.
+SHARED_PASSWORD_ROOTS = ("seo",)
+
+
+def password_scope(relative_path: str) -> str:
+    parts = relative_path.split("/")
+    if len(parts) >= 3 and parts[0] in SHARED_PASSWORD_ROOTS:
+        return "/".join(parts[:2])
+    return relative_path
+
+
 def password_for(master_secret: str, relative_path: str, overrides: dict) -> tuple:
-    """Return (password, is_override) - an override always wins over the derived value."""
-    if relative_path in overrides:
-        return overrides[relative_path], True
-    return derive_password(master_secret, relative_path), False
+    """Return (password, is_override) - an override always wins over the derived value.
+    Overrides match the file path or, for shared folders, the folder (e.g. "seo/palko")."""
+    scope = password_scope(relative_path)
+    for key in (relative_path, scope):
+        if key in overrides:
+            return overrides[key], True
+    return derive_password(master_secret, scope), False
 
 
 def encrypt_file(src: Path, output_dir: Path, password: str) -> bool:
