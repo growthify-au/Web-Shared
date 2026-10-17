@@ -55,6 +55,9 @@ Prints URL + password per file (derives without re-encrypting). Send the URL and
 make encrypt
 ```
 
+## SEO dashboards (`seo/`)
+Published only by `Team/tools/seo/seo.py publish <site>` - it Growthify-brands each page, keeps data files (summary/plan JSON, CSVs) out, and writes sources to `Team/web-shared-sources/seo/`. Every page under `seo/<site>/` shares ONE password (folder-scoped in `encrypt_public.py`, `SHARED_PASSWORD_ROOTS`); `seo/index.html` is the internal overview with its own password. `seo.py passwords` prints them. Don't hand-edit anything under `public/seo/`.
+
 ## Teammate onboarding (one-time per machine)
 1. `git clone https://github.com/growthify-au/Web-Shared.git`
 2. `npm install` (installs StatiCrypt)
